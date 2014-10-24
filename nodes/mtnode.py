@@ -244,7 +244,7 @@ class XSensDriver(object):
 				imu_msg.linear_acceleration.z = v[2]
 				imu_msg.linear_acceleration_covariance = (0.0004, 0., 0., 0.,
 						0.0004, 0., 0., 0., 0.0004)
-				pub_imu = True
+				pub_imu = False
 			except KeyError:
 				pass
 			try:
