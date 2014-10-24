@@ -347,8 +347,8 @@ class XSensDriver(object):
 			self.mag_pub.publish(mag_msg)
 		if pub_temp:
 			self.temp_pub.publish(temp_msg)
-		if free_imu_pub:
-			self.free_imu_pub.publish(free_imu_msg)
+		#if free_imu_pub:
+		self.free_imu_pub.publish(free_imu_msg)
 
 
 def main():
