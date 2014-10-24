@@ -258,7 +258,6 @@ class XSensDriver(object):
 				free_imu_msg.x = v[0]
 				free_imu_msg.y = v[1]
 				free_imu_msg.z = v[2]
-				pub_imu = True
 				free_imu_pub = True
 				except KeyError:
 				pass
