@@ -90,6 +90,7 @@ class XSensDriver(object):
 		self.diag_msg.status = [self.stest_stat, self.xkf_stat, self.gps_stat]
 
 		self.imu_pub = rospy.Publisher('imu/data', Imu)
+		self.free_imu_pub = rospy.Publisher('imu/free_data', Vector3)		
 		self.gps_pub = rospy.Publisher('fix', NavSatFix)
 		self.xgps_pub = rospy.Publisher('fix_extended', GPSFix)
 		self.vel_pub = rospy.Publisher('velocity', TwistStamped)
@@ -162,6 +163,7 @@ class XSensDriver(object):
 		pub_mag = False
 		temp_msg = Float32()
 		pub_temp = False
+		free_imu_msg = Vector3()
 
 		# fill information where it's due
 		# start by raw information that can be overriden
@@ -253,13 +255,12 @@ class XSensDriver(object):
 				z = imu_data['freeAccZ']
 				v = numpy.array([x, y, z])
 				v = v.dot(self.R)
-				imu_msg.linear_acceleration.x = v[0]
-				imu_msg.linear_acceleration.y = v[1]
-				imu_msg.linear_acceleration.z = v[2]
-				imu_msg.linear_acceleration_covariance = (0.0004, 0., 0., 0.,
-				0.0004, 0., 0., 0., 0.0004)
+				free_imu_msg.x = v[0]
+				free_imu_msg.y = v[1]
+				free_imu_msg.z = v[2]
 				pub_imu = True
-			except KeyError:
+				free_imu_pub = True
+				except KeyError:
 				pass
 			try:
 				x = imu_data['magX']
@@ -347,7 +348,8 @@ class XSensDriver(object):
 			self.mag_pub.publish(mag_msg)
 		if pub_temp:
 			self.temp_pub.publish(temp_msg)
-
+		if free_imu_pub:
+			self.free_imu_pub.publish(free_imu_msg)
 
 
 def main():
