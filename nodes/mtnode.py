@@ -248,6 +248,20 @@ class XSensDriver(object):
 			except KeyError:
 				pass
 			try:
+				x = imu_data['freeAccX']
+				y = imu_data['freeAccY']
+				z = imu_data['freeAccZ']
+				v = numpy.array([x, y, z])
+				v = v.dot(self.R)
+				imu_msg.linear_acceleration.x = v[0]
+				imu_msg.linear_acceleration.y = v[1]
+				imu_msg.linear_acceleration.z = v[2]
+				imu_msg.linear_acceleration_covariance = (0.0004, 0., 0., 0.,
+				0.0004, 0., 0., 0., 0.0004)
+				pub_imu = True
+				except KeyError:
+				pass
+			try:
 				x = imu_data['magX']
 				y = imu_data['magY']
 				z = imu_data['magZ']
