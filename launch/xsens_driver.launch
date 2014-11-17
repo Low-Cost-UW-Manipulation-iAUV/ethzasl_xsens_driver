@@ -1,5 +1,5 @@
 <launch>
-    <arg name="frame_id" default="/odom"/>
+    <arg name="frame_id" default="/xsens"/>
 
     <arg name="frame_local" default="ENU"/>
     <arg name="frame_local_imu" default="ENU"/>
