@@ -3,11 +3,15 @@
 
     <arg name="frame_local" default="ENU"/>
     <arg name="frame_local_imu" default="ENU"/>
-
+    <arg name="device" default="/dev/ttyUSB_IMU" />
+    <arg name="baudrate" default="115200" />
+    
 	<node pkg="xsens_driver" type="mtnode_new.py" name="xsens_driver" output="screen" respawn="true">
-		
+		<param name="device" value="$(arg device)" />
 		<param name="frame_id" value="$(arg frame_id)"/>
 		<param name="frame_local" value="$(arg frame_local)"/>
 		<param name="frame_local_imu" value="$(arg frame_local_imu)"/>
+		<param name="baudrate" value="$(arg baudrate)"/>
+
 	</node>
 </launch>
