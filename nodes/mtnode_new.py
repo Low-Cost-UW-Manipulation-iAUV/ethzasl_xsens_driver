@@ -15,7 +15,8 @@ import time
 
 # transform Euler angles or matrix into quaternions
 from math import pi, radians
-from tf.transformations import quaternion_from_matrix, quaternion_from_euler, identity_matrix
+from numpy import mean, var
+from tf.transformations import quaternion_from_matrix, quaternion_from_euler, identity_matrix, euler_from_quaternion
 
 
 def get_param(name, default):
@@ -31,7 +32,15 @@ def get_param(name, default):
 class XSensDriver(object):
 	
 	def __init__(self):
-		
+		self.orient_calibrated = False
+		self.orient_calibration_counter = 0
+		self.variance_yaw = radians(1.)
+		self.variance_pitch = radians(1.)
+		self.variance_roll = radians(9.)	#are these for real???
+		self.calibration_data_yaw = []
+		self.calibration_data_pitch = []
+		self.calibration_data_roll = []
+
 		device = get_param('~device', 'auto')
 		baudrate = get_param('~baudrate', 0)
 		if device=='auto':
@@ -157,7 +166,7 @@ class XSensDriver(object):
 				self.imu_msg.angular_velocity.x = imu_data['gyrX']
 				self.imu_msg.angular_velocity.y = imu_data['gyrY']
 				self.imu_msg.angular_velocity.z = imu_data['gyrZ']
-				self.imu_msg.angular_velocity_covariance = (radians(0.025), 0., 0., 0.,
+				self.imu_msg.angular_velocity_covariance = (radians(0.05), 0., 0., 0.,
 						radians(0.025), 0., 0., 0., radians(0.025))
 				self.pub_vel = True
 				self.vel_msg.twist.angular.x = imu_data['gyrX']
@@ -194,6 +203,17 @@ class XSensDriver(object):
 			self.pub_imu = True
 			if orient.has_key('quaternion'):
 				w, x, y, z = orient['quaternion']
+				if self.orient_calibrated == False:
+					euler = euler_from_quaternion(orient['quaternion'])
+					self.calibration_data_roll.append(euler[0])
+					self.calibration_data_pitch.append(euler[1])
+					self.calibration_data_yaw.append(euler[2])
+					self.orient_calibration_counter += 1
+					if self.orient_calibration_counter >= 4000: # We have been calibrating for 10s
+						self.orient_calibrated = True
+						self.variance_yaw = var(self.calibration_data_yaw)
+						self.variance_pitch = var(self.calibration_data_pitch)
+						self.variance_roll = var(self.calibration_data_roll)						
 			elif orient.has_key('roll'):
 				# FIXME check that Euler angles are in radians
 				x, y, z, w = quaternion_from_euler(radians(orient['roll']),
@@ -206,8 +226,8 @@ class XSensDriver(object):
 			self.imu_msg.orientation.y = y
 			self.imu_msg.orientation.z = z
 			self.imu_msg.orientation.w = w
-			self.imu_msg.orientation_covariance = (radians(1.), 0., 0., 0.,
-					radians(1.), 0., 0., 0., radians(9.))
+			self.imu_msg.orientation_covariance = (self.variance_roll, 0., 0., 0.,
+					self.variance_pitch, 0., 0., 0., self.variance_yaw)
 		
 		def fill_from_Pos(position_data):
 			'''Fill messages with information from 'position' MTData block.'''
@@ -304,12 +324,25 @@ class XSensDriver(object):
 				x, y, z, w = quaternion_from_matrix(m)
 			except KeyError:
 				pass
+			if self.orient_calibrated == False:
+				quat = (x,y,z,w)
+				euler = euler_from_quaternion(quat)
+				self.calibration_data_roll.append(euler[0])
+				self.calibration_data_pitch.append(euler[1])
+				self.calibration_data_yaw.append(euler[2])
+				self.orient_calibration_counter +=1
+				if self.orient_calibration_counter >= 4000: # We have been calibrating for 10s
+					self.orient_calibrated = True
+					self.variance_yaw = var(self.calibration_data_yaw)
+					self.variance_pitch = var(self.calibration_data_pitch)
+					self.variance_roll = var(self.calibration_data_roll)
+
 			self.imu_msg.orientation.x = x
 			self.imu_msg.orientation.y = y
 			self.imu_msg.orientation.z = z
 			self.imu_msg.orientation.w = w
-			self.imu_msg.orientation_covariance = (radians(1.), 0., 0., 0.,
-					radians(1.), 0., 0., 0., radians(9.))
+			self.imu_msg.orientation_covariance = (self.variance_roll, 0., 0., 0.,
+					self.variance_pitch, 0., 0., 0., self.variance_yaw)
 		
 		def fill_from_Pressure(o):
 			'''Fill messages with information from 'Pressure' MTData2 block.'''
