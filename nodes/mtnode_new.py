@@ -41,6 +41,24 @@ class XSensDriver(object):
 		self.calibration_data_pitch = []
 		self.calibration_data_roll = []
 
+		self.anguvel_calibrated = False
+		self.anguvel_calibration_counter = 0
+		self.variance_vx = radians(0.025)
+		self.variance_vy = radians(0.025)
+		self.variance_vz = radians(0.025)
+		self.calibration_data_vx = []
+		self.calibration_data_vy = []
+		self.calibration_data_vz = []
+
+		self.linacc_calibrated = False
+		self.linacc_calibrtion_counter = 0
+		self.variance_lacc_x = 0.0004
+		self.variance_lacc_y = 0.0004
+		self.variance_lacc_z = 0.0004
+		self.calibration_data_lacc_x = []
+		self.calibration_data_lacc_y = []
+		self.calibration_data_lacc_z = []
+
 		device = get_param('~device', 'auto')
 		baudrate = get_param('~baudrate', 0)
 		if device=='auto':
@@ -162,25 +180,46 @@ class XSensDriver(object):
 		def fill_from_Calib(imu_data):
 			'''Fill messages with information from 'calibrated' MTData block.'''
 			try:
+				if self.anguvel_calibrated == False:
+					self.calibration_data_vx.append(imu_data['gyrX'])
+					self.calibration_data_vy.append(imu_data['gyrY'])
+					self.calibration_data_vz.append(imu_data['gyrZ'])
+					self.anguvel_calibration_counter += 1
+					if self.anguvel_calibration_counter >= 4000: # We have been calibrating for 10s
+						self.anguvel_calibrated = True
+						self.variance_vx = var(self.calibration_data_vx)
+						self.variance_vy = var(self.calibration_data_vy)
+						self.variance_vz = var(self.calibration_data_vz)				
 				self.pub_imu = True
 				self.imu_msg.angular_velocity.x = imu_data['gyrX']
 				self.imu_msg.angular_velocity.y = imu_data['gyrY']
 				self.imu_msg.angular_velocity.z = imu_data['gyrZ']
-				self.imu_msg.angular_velocity_covariance = (radians(0.05), 0., 0., 0.,
-						radians(0.025), 0., 0., 0., radians(0.025))
+				self.imu_msg.angular_velocity_covariance = (self.variance_vx, 0., 0., 0.,
+						self.variance_vy, 0., 0., 0., self.variance_vz)
 				self.pub_vel = True
 				self.vel_msg.twist.angular.x = imu_data['gyrX']
 				self.vel_msg.twist.angular.y = imu_data['gyrY']
 				self.vel_msg.twist.angular.z = imu_data['gyrZ']
+
 			except KeyError:
 				pass
 			try:
+				if self.linacc_calibrated == False:
+					self.calibration_data_lacc_x.append(imu_data['accX'])
+					self.calibration_data_lacc_y.append(imu_data['accY'])
+					self.calibration_data_lacc_z.append(imu_data['accZ'])
+					self.linacc_calibrtion_counter += 1
+					if self.linacc_calibrtion_counter >= 4000: # We have been calibrating for 10s
+						self.linacc_calibrated = True
+						self.variance_lacc_x = var(self.calibration_data_lacc_x)
+						self.variance_lacc_y = var(self.calibration_data_lacc_y)
+						self.variance_lacc_z = var(self.calibration_data_lacc_z)				
 				self.pub_imu = True
 				self.imu_msg.linear_acceleration.x = imu_data['accX']
 				self.imu_msg.linear_acceleration.y = imu_data['accY']
 				self.imu_msg.linear_acceleration.z = imu_data['accZ']
-				self.imu_msg.linear_acceleration_covariance = (0.0004, 0., 0., 0.,
-						0.0004, 0., 0., 0., 0.0004)
+				self.imu_msg.linear_acceleration_covariance = (self.variance_lacc_x, 0., 0., 0.,
+						self.variance_lacc_x, 0., 0., 0., self.variance_lacc_x)
 			except KeyError:
 				pass			
 			try:
@@ -365,12 +404,21 @@ class XSensDriver(object):
 				x, y, z = o['accX'], o['accY'], o['accZ']
 			except KeyError:
 				pass
-			      
+			if self.linacc_calibrated == False:
+				self.calibration_data_lacc_x.append(x)
+				self.calibration_data_lacc_y.append(y)
+				self.calibration_data_lacc_z.append(z)
+				self.linacc_calibrtion_counter += 1
+				if self.linacc_calibrtion_counter >= 4000: # We have been calibrating for 10s
+					self.linacc_calibrated = True
+					self.variance_lacc_x = var(self.calibration_data_lacc_x)
+					self.variance_lacc_y = var(self.calibration_data_lacc_y)
+					self.variance_lacc_z = var(self.calibration_data_lacc_z)			      
 			self.imu_msg.linear_acceleration.x = x
 			self.imu_msg.linear_acceleration.y = y
 			self.imu_msg.linear_acceleration.z = z
-			self.imu_msg.linear_acceleration_covariance = (0.0004, 0., 0., 0.,
-					0.0004, 0., 0., 0., 0.0004)
+			self.imu_msg.linear_acceleration_covariance = (self.variance_lacc_x, 0., 0., 0.,
+					self.variance_lacc_y, 0., 0., 0., self.variance_lacc_z)
 		
 		def fill_from_Position(o):
 			'''Fill messages with information from 'Position' MTData2 block.'''
@@ -387,11 +435,21 @@ class XSensDriver(object):
 		def fill_from_Angular_Velocity(o):
 			'''Fill messages with information from 'Angular Velocity' MTData2 block.'''
 			try:
+				if self.anguvel_calibrated == False:
+						self.calibration_data_vx.append(o['gyrX'])
+						self.calibration_data_vy.append(o['gyrY'])
+						self.calibration_data_vz.append(o['gyrZ'])
+						self.anguvel_calibration_counter += 1
+						if self.anguvel_calibration_counter >= 4000: # We have been calibrating for 10s
+							self.anguvel_calibrated = True
+							self.variance_vx = var(self.calibration_data_vx)
+							self.variance_vy = var(self.calibration_data_vy)
+							self.variance_vz = var(self.calibration_data_vz)				
 				self.imu_msg.angular_velocity.x = o['gyrX']
 				self.imu_msg.angular_velocity.y = o['gyrY']
 				self.imu_msg.angular_velocity.z = o['gyrZ']
-				self.imu_msg.angular_velocity_covariance = (radians(0.025), 0., 0., 0.,
-						radians(0.025), 0., 0., 0., radians(0.025))
+				self.imu_msg.angular_velocity_covariance = (self.variance_vx, 0., 0., 0.,
+						self.variance_vy, 0., 0., 0., self.variance_vz)
 				self.pub_imu = True
 				self.vel_msg.twist.angular.x = o['gyrX']
 				self.vel_msg.twist.angular.y = o['gyrY']
